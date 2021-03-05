@@ -80,7 +80,7 @@ void *worker(void *params) { // life cycle of a cracking pthread
         if(monitor)
           printf("\n"); // keep our printing pretty!
 
-        if(!BN_bin2bn(e_ptr, e_bytes, rsa->e)) // store our e in the actual key
+        if(!BN_bin2bn(e_ptr, e_bytes, RSA_get0_e(rsa))) // store our e in the actual key
           error(X_BIGNUM_FAILED);              // and make sure it got there
 
         if(!sane_key(rsa))        // check our key

@@ -2,6 +2,10 @@
 
 #include "math.h"
 #include "defines.h"
+#include <openssl/objects.h>
+#include <openssl/bn.h>
+#include <openssl/rsa.h>
+#include <openssl/sha.h>
 
 void int_pow(uint32_t base, uint8_t pwr, uint64_t *out) { // integer pow()
   *out = (uint64_t)base;
@@ -62,26 +66,28 @@ uint8_t sane_key(RSA *rsa) { // checks sanity of a RSA key (PKCS#1 v2.1)
          *q1     = BN_CTX_get(ctx), // q - 1
          *chk    = BN_CTX_get(ctx), // storage to run checks with
          *gcd    = BN_CTX_get(ctx), // GCD(p - 1, q - 1)
-         *lambda = BN_CTX_get(ctx); // LCM(p - 1, q - 1)
+         *lambda = BN_CTX_get(ctx),
+         *zero   = BN_CTX_get(ctx); // LCM(p - 1, q - 1)
+  BN_zero(zero);
 
-  BN_sub(p1, rsa->p, BN_value_one()); // p - 1
-  BN_sub(q1, rsa->q, BN_value_one()); // q - 1
+  BN_sub(p1, RSA_get0_p(rsa), BN_value_one()); // p - 1
+  BN_sub(q1, RSA_get0_q(rsa), BN_value_one()); // q - 1
   BN_gcd(gcd, p1, q1, ctx);           // gcd(p - 1, q - 1)
   BN_lcm(lambda, p1, q1, gcd, ctx);   // lambda(n)
 
-  BN_gcd(chk, lambda, rsa->e, ctx); // check if e is coprime to lambda(n)
+  BN_gcd(chk, lambda, RSA_get0_e(rsa), ctx); // check if e is coprime to lambda(n)
   if(!BN_is_one(chk))
     sane = 0;
 
   // check if public exponent e is less than n - 1
-  BN_sub(chk, rsa->e, rsa->n); // subtract n from e to avoid checking BN_is_zero
-  if(!chk->neg)
+  BN_sub(chk, RSA_get0_e(rsa), RSA_get0_n(rsa)); // subtract n from e to avoid checking BN_is_zero
+  if(BN_cmp(chk, zero) != -1)
     sane = 0;
 
-  BN_mod_inverse(rsa->d, rsa->e, lambda, ctx);    // d
-  BN_mod(rsa->dmp1, rsa->d, p1, ctx);             // d mod (p - 1)
-  BN_mod(rsa->dmq1, rsa->d, q1, ctx);             // d mod (q - 1)
-  BN_mod_inverse(rsa->iqmp, rsa->q, rsa->p, ctx); // q ^ -1 mod p
+  BN_mod_inverse(RSA_get0_d(rsa), RSA_get0_e(rsa), lambda, ctx);    // d
+  BN_mod(RSA_get0_dmp1(rsa), RSA_get0_d(rsa), p1, ctx);             // d mod (p - 1)
+  BN_mod(RSA_get0_dmq1(rsa), RSA_get0_d(rsa), q1, ctx);             // d mod (q - 1)
+  BN_mod_inverse(RSA_get0_iqmp(rsa), RSA_get0_q(rsa), RSA_get0_p(rsa), ctx); // q ^ -1 mod p
   BN_CTX_end(ctx);
   BN_CTX_free(ctx);
 

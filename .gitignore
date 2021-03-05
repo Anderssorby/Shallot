@@ -1,3 +1,4 @@
 shallot
 src/config.h
 *.o
+.direnv

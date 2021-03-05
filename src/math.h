@@ -20,6 +20,7 @@
 #endif
 
 #include <stdint.h>
+#include <openssl/objects.h>
 #include <openssl/bn.h>
 #include <openssl/rsa.h>
 #include <openssl/sha.h>
